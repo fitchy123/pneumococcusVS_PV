@@ -6,23 +6,28 @@ This dataset contains code to run screening of the drug repurposing hub with pre
 
 #### Repository Structure
 This repository contains:
-- Pre-processed dataset used in model training (processed_datasets/10uM_FP_clustered_resistant_pneumococcus_augmented_dataset.csv)
-- Drug repurposing hub screening dataset (https://repo-hub.broadinstitute.org/repurposing)
-- Instructions for obtaining saved molformer-based models (README.md)
-- Code for evaluating models (models/molformer)
+- Pre-processed dataset used in model training- processed_datasets/10uM_FP_clustered_resistant_pneumococcus_augmented_dataset.csv
+- Drug repurposing hub screening dataset- processed_datasets/repurposing_samples.csv (https://repo-hub.broadinstitute.org/repurposing)
+- Instructions for obtaining saved models (README.md)
+- Code for evaluating models (models/)
 - Instructions for running evaluation (README.md)
 - Files for ensuring the correct packages are installed (environment.yml and requirements.txt)
 
+#### Virtual Screening Results
+To analyse the results of ML methods on the drug repurposing hub run:
+- results_analysis.py
+
 #### Running models
 
-The saved molformer models can be downloaded from zenodo: https://zenodo.org/records/14960323
+The saved models can be downloaded from zenodo: https://zenodo.org/records/14960323
 
 These models should be downloaded and saved in the repository, by default the paths are set to look for them in the "model_checkpoints" folder but you can also pass your own path as a command line argument. 
 
-File to run virtual screening:
-- models/molformer/lightning_predict.py
-File to analyse results:
-- results/results_analysis.py
+Files to run virtual screening:
+- MolFormer: models/molformer/lightning_predict.py
+- Chemprop: models/chemprop/run_chemprop.py
+- Random Forest: models/random_forest/run_rf.py
+Running these files will save the results of that ML method in a CSV file in the results directory
 
 #### Package Installation
 - Set up conda environment with environment.yml: `conda env create -f environment.yml`

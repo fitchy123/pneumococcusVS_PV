@@ -1,3 +1,4 @@
 model_checkpoints/
 tmp/
 model_checkpoints/
+processed_datasets/featurized_data_chemprop.pkl
