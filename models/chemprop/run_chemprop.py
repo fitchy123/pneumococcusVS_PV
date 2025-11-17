@@ -127,7 +127,7 @@ if __name__ == '__main__':
     for model_dir in model_files:
         model = MyDMPNNModel(mode='classification', 
                                 # learning_rate=5e-5,
-                                n_classes=2, 
+                                n_classes=2,
                                 batch_size=256, 
                                 # enc_dropout_p=0.4, 
                                 ffn_dropout_p=0.3, 

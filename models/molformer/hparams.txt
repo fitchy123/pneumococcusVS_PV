@@ -1,0 +1,8 @@
+ffn_dim: 1536
+ffn_depth: 6
+nEpochs: 5
+batch_size: 256
+lr: 0.0001
+ffn_dropout: 0.4
+activation: 'gelu'
+loss: 'cross_entropy'

@@ -1,0 +1,5 @@
+n_estimators: 200
+max_depth: None
+min_samples_per_leaf: 4
+criterion: 'entropy'
+class_weight: 'balanced'

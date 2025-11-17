@@ -19,7 +19,8 @@ To analyse the results of ML methods on the drug repurposing hub run:
 
 #### Running models
 
-The saved models can be downloaded from zenodo: https://zenodo.org/records/14960323
+The saved models can be downloaded from zenodo: https://zenodo.org/records/14960323\
+Within each model folder there is a hparams.txt file listing hyperparameters of the saved models for reference (saved models from zenodo will run on default code with no changes necessary).
 
 These models should be downloaded and saved in the repository, by default the paths are set to look for them in the "model_checkpoints" folder but you can also pass your own path as a command line argument. 
 

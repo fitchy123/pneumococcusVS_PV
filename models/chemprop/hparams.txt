@@ -1,0 +1,8 @@
+ffn_hidden_dim: 1600
+message_passing_depth: 6
+message_passing_aggregation: 'sum'
+ffn_dropout: 0.3
+ffn_activation: 'gelu'
+batch_size: 256
+loss: 'cross_entropy'
+lr: 0.001
