@@ -13,8 +13,8 @@ This repository contains:
 - Instructions for running evaluation (README.md)
 - Files for ensuring the correct packages are installed (environment.yml and requirements.txt)
 
-#### Virtual Screening Results
-To analyse the results of ML methods on the drug repurposing hub run:
+#### Virtual Screening Results Analysis
+To just analyze the results of ML methods on the drug repurposing hub run:
 - results_analysis.py
 
 #### Running models
@@ -26,8 +26,8 @@ Within each model folder there is a hparams.txt file listing hyperparameters of 
 These models should be downloaded and saved in the repository, by default the paths are set to look for them in the "model_checkpoints" folder but you can also pass your own path as a command line argument. 
 
 Files to run virtual screening:
-- MolFormer: models/molformer/lightning_predict.py
-- Chemprop: models/chemprop/run_chemprop.py
+- MoLFormer: models/molformer/lightning_predict.py
+- D-MPNN: models/chemprop/run_chemprop.py
 - Random Forest: models/random_forest/run_rf.py
 Running these files will save the results of that ML method in a CSV file in the results directory
 
