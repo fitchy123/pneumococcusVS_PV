@@ -83,7 +83,14 @@ if __name__ == '__main__':
     with torch.no_grad():
         ensemble_y_scores = []
         for model_path in tqdm(model_files):
-            model = FFNMolFormer.load_from_checkpoint(model_path).to(device='cuda')
+            try:
+                model = FFNMolFormer.load_from_checkpoint(model_path).to(device='cuda')
+            except KeyError:
+                ckpt = torch.load(model_path, map_location='cpu')
+                hparams = ckpt.get('hyper_parameters', {})
+                model = FFNMolFormer(**hparams)
+                model.load_state_dict(ckpt['state_dict'])
+                model = model.to(device='cuda')
             model.eval()
             y_scores = []
             for batch in tqdm(test_loader, leave=False):

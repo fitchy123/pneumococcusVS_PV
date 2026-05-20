@@ -3,6 +3,14 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
 import numpy as np
 import seaborn as sns
+import argparse
+import os
+
+parser = argparse.ArgumentParser(description='Analyse prediction CSVs from a results folder')
+parser.add_argument('--results_folder', type=str, default='results',
+                    help='Folder containing prediction CSVs and where output figures are saved')
+args = parser.parse_args()
+results_folder = args.results_folder
 
 number_of_molecules = 20
 
@@ -390,9 +398,9 @@ resistant_df = resistant_df[resistant_df['source']!='MRSA_Wong2024']
 resistant_inchikeys = set(resistant_df['InChIKey'].dropna())
 #resistant_smiles = set(resistant_df['Smiles'].dropna())
 # Process predictions for each model
-molformer_df = process_predictions('results/molformer_predictions.csv', resistant_inchikeys, "MoLFormer")
-chemprop_df = process_predictions('results/chemprop_predictions.csv', resistant_inchikeys, "D-MPNN")
-rf_df = process_predictions('results/rf_predictions.csv', resistant_inchikeys, "Random Forest")
+molformer_df = process_predictions(os.path.join(results_folder, 'molformer_predictions.csv'), resistant_inchikeys, "MoLFormer")
+chemprop_df = process_predictions(os.path.join(results_folder, 'chemprop_predictions.csv'), resistant_inchikeys, "D-MPNN")
+rf_df = process_predictions(os.path.join(results_folder, 'rf_predictions.csv'), resistant_inchikeys, "Random Forest")
 
 # --- Spearman Correlation of Ranks Across Methods ---
 ranks_df = (
@@ -443,13 +451,13 @@ unique_curves = compute_unique_curves(ranks_df, percents)
 unique_ci = compute_binomial_confidence_intervals(unique_curves, k_values)
 
 # Combined plot with labels b and c
-plot_overlap_and_unique_combined(percents, overlap_curves, unique_curves, 
-                                 'results/overlap_and_unique_combined.png',
+plot_overlap_and_unique_combined(percents, overlap_curves, unique_curves,
+                                 os.path.join(results_folder, 'overlap_and_unique_combined.png'),
                                  overlap_ci=overlap_ci, unique_ci=unique_ci, use_dashes=True)
 
 # Individual plots (kept for backward compatibility)
-plot_overlap_curves(percents, overlap_curves, 'results/overlap_vs_top_percent.png', confidence_intervals=overlap_ci, use_dashes=True)
-plot_unique_curves(percents, unique_curves, 'results/unique_in_top_percent.png', confidence_intervals=unique_ci, use_dashes=True)
+plot_overlap_curves(percents, overlap_curves, os.path.join(results_folder, 'overlap_vs_top_percent.png'), confidence_intervals=overlap_ci, use_dashes=True)
+plot_unique_curves(percents, unique_curves, os.path.join(results_folder, 'unique_in_top_percent.png'), confidence_intervals=unique_ci, use_dashes=True)
 
 # --- Add cross-model ranks ---
 molformer_df['rank_chemprop'] = [chemprop_df[chemprop_df['InChIKey'] == InChIKey]['rank'].values[0] for InChIKey in molformer_df['InChIKey']]
@@ -508,7 +516,7 @@ ensemble_all_df['rank'] = ensemble_all_df.index
 
 # --- Prediction probability distributions ---
 pred_series = collect_prediction_series(molformer_df, chemprop_df, rf_df, merged_df)
-plot_prediction_histograms_grid(pred_series, 'results/prediction_distributions_grid_logx.png', bins=30, xlim=(0.0, 1.0), log_x=False, log_y=True, density=False, same_y_scale=True, kde=False, kde_bw_adjust=1.5, panel_label='a')
+plot_prediction_histograms_grid(pred_series, os.path.join(results_folder, 'prediction_distributions_grid_logx.png'), bins=30, xlim=(0.0, 1.0), log_x=False, log_y=True, density=False, same_y_scale=True, kde=False, kde_bw_adjust=1.5, panel_label='a')
 
 # --- Predictions for Specific Drugs ---
 drugs = ['dactinomycin', 'Cadazolid', 'Cefazolin (sodium)', 'Cefodizime', 'Cefotetan', 

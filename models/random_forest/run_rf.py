@@ -8,6 +8,8 @@ from sklearn.metrics import precision_recall_curve, confusion_matrix, roc_auc_sc
 from imblearn.ensemble import BalancedRandomForestClassifier
 import argparse
 import os
+import glob
+import numpy as np
 
 # Update argument parsing
 parser = argparse.ArgumentParser(description='Run Random Forest model with different options')
@@ -21,6 +23,8 @@ parser.add_argument('--data_path', type=str,
                     help='Path to the input dataset')
 parser.add_argument('--output_path', type=str, default='results/rf_predictions.csv', help='Path to save predictions')
 parser.add_argument('--train', action='store_true', help='Train')
+parser.add_argument('--ensemble', action='store_true', help='Run an ensemble of all models whose paths match --model_path as a glob prefix')
+parser.add_argument('--agg_fn', type=str, default='median', choices=['mean', 'median'], help='ensemble aggregation function')
 args = parser.parse_args()
 
 # read in data
@@ -47,39 +51,56 @@ else:
 
 
 
-if args.load_model:
-    rfc_cv = joblib.load(args.model_path)
-else:
-    if args.tuning:
-        print("Tuning hyperparameters")
-        # hyperparameter tuning
-        params = {'max_depth':[None, 16, 256],
-                'min_samples_leaf':[1, 2, 4],
-                'criterion':['gini','entropy'],
-                'class_weight':['balanced',None]}
-
-        rfc = RandomForestClassifier(n_estimators=200, random_state=3) #32
-        rfc_cv = GridSearchCV(rfc, params, cv =5, n_jobs=5, scoring='average_precision', verbose=2)
-        rfc_cv.fit(train_fps, df.loc[train_idx]['final_activity_label'])
-        joblib.dump(rfc_cv.best_estimator_, args.model_path)
-
-        rfc_cv_resultsDF = pd.DataFrame(rfc_cv.cv_results_).sort_values('mean_test_score', ascending=False)
-        rfc_cv_resultsDF.to_csv(r'processed_datasets/rfc_morgan_5StratifiedFold_CV_results_repro.csv', index=False)
-        print(rfc_cv.best_estimator_)
-    elif args.balanced:
-        print("Training singular balanced model")
-        rfc_cv = BalancedRandomForestClassifier(n_estimators=200, random_state=3).fit(train_fps, df.loc[train_idx]['final_activity_label'])
+if args.ensemble:
+    model_files = glob.glob(f'{args.model_path}*')
+    print(f"Running ensemble with {len(model_files)} models")
+    all_preds = []
+    for model_file in model_files:
+        m = joblib.load(model_file)
+        all_preds.append([x[1] for x in m.predict_proba(test_fps)])
+    all_preds = np.array(all_preds)  # shape: (n_models, n_samples)
+    if args.agg_fn == 'median':
+        pred = np.median(all_preds, axis=0)
+        uncertainty = np.quantile(all_preds, 0.75, axis=0) - np.quantile(all_preds, 0.25, axis=0)
     else:
-        print("Training singular model")
-        rfc_cv = RandomForestClassifier(n_estimators=200, random_state=3).fit(train_fps, df.loc[train_idx]['final_activity_label'])
+        pred = np.mean(all_preds, axis=0)
+        uncertainty = np.std(all_preds, axis=0)
+else:
+    if args.load_model:
+        rfc_cv = joblib.load(args.model_path)
+    else:
+        if args.tuning:
+            print("Tuning hyperparameters")
+            # hyperparameter tuning
+            params = {'max_depth':[None, 16, 256],
+                    'min_samples_leaf':[1, 2, 4],
+                    'criterion':['gini','entropy'],
+                    'class_weight':['balanced',None]}
 
-pred = [x[1] for x in rfc_cv.predict_proba(test_fps)]
+            rfc = RandomForestClassifier(n_estimators=200, random_state=3) #32
+            rfc_cv = GridSearchCV(rfc, params, cv =5, n_jobs=5, scoring='average_precision', verbose=2)
+            rfc_cv.fit(train_fps, df.loc[train_idx]['final_activity_label'])
+            joblib.dump(rfc_cv.best_estimator_, args.model_path)
+
+            rfc_cv_resultsDF = pd.DataFrame(rfc_cv.cv_results_).sort_values('mean_test_score', ascending=False)
+            rfc_cv_resultsDF.to_csv(r'processed_datasets/rfc_morgan_5StratifiedFold_CV_results_repro.csv', index=False)
+            print(rfc_cv.best_estimator_)
+        elif args.balanced:
+            print("Training singular balanced model")
+            rfc_cv = BalancedRandomForestClassifier(n_estimators=200, random_state=3).fit(train_fps, df.loc[train_idx]['final_activity_label'])
+        else:
+            print("Training singular model")
+            rfc_cv = RandomForestClassifier(n_estimators=200, random_state=3).fit(train_fps, df.loc[train_idx]['final_activity_label'])
+
+    pred = [x[1] for x in rfc_cv.predict_proba(test_fps)]
+    uncertainty = 0.0
 
 if args.output_path:
     os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
     df_all['prediction'] = -1.0
     df_all['uncertainty'] = 0.0
     df_all.loc[test_idx, 'prediction'] = pred
+    df_all.loc[test_idx, 'uncertainty'] = uncertainty
     df_all.to_csv(args.output_path, index=False)
 
 #p_precision, p_recall, thresholds = precision_recall_curve(df['final_activity_label'].loc[test_idx], pred)
