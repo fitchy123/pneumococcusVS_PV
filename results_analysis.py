@@ -5,6 +5,7 @@ import numpy as np
 import seaborn as sns
 import argparse
 import os
+from scipy import stats
 
 parser = argparse.ArgumentParser(description='Analyse prediction CSVs from a results folder')
 parser.add_argument('--results_folder', type=str, default='results',
@@ -529,21 +530,21 @@ for drug in drugs:
     # Ensemble (MoLFormer + D-MPNN Average)
     ens_res = ensemble_df[(ensemble_df['vendor_name'].str.lower() == drug.lower()) | (ensemble_df['pert_iname'].str.lower() == drug.lower())]
     if not ens_res.empty:
-        print(f"  Ensemble:      Average Prediction={ens_res['average_prediction'].values[0]:.3f}, Rank={ens_res['rank'].values[0]+1}")
+        print(f"  Ensemble:      Average Prediction={ens_res['average_prediction'].values[0]:.3f}, Rank={ens_res['rank'].values[0]}")
     else:
         print("  Ensemble:      Not found")
         
     # MoLFormer
     mol_res = molformer_df[(molformer_df['vendor_name'].str.lower() == drug.lower()) | (molformer_df['pert_iname'].str.lower() == drug.lower())]
     if not mol_res.empty:
-        print(f"  MoLFormer:     Prediction={mol_res['prediction'].values[0]:.3f}, Rank={mol_res['rank'].values[0]+1}, Uncertainty={mol_res['uncertainty'].values[0]:.3f}")
+        print(f"  MoLFormer:     Prediction={mol_res['prediction'].values[0]:.3f}, Rank={mol_res['rank'].values[0]}, Uncertainty={mol_res['uncertainty'].values[0]:.3f}")
     else:
         print("  MoLFormer:     Not found")
 
     # D-MPNN
     che_res = chemprop_df[(chemprop_df['vendor_name'].str.lower() == drug.lower()) | (chemprop_df['pert_iname'].str.lower() == drug.lower())]
     if not che_res.empty:
-        rank_info = f"Rank={che_res['rank'].values[0]+1}"
+        rank_info = f"Rank={che_res['rank'].values[0]}"
         uncertainty_info = f", Uncertainty={che_res['uncertainty'].values[0]:.3f}" if 'uncertainty' in che_res.columns else ""
         print(f"  D-MPNN:        Prediction={che_res['prediction'].values[0]:.3f}, {rank_info}{uncertainty_info}")
     else:
@@ -552,9 +553,91 @@ for drug in drugs:
     # Random Forest
     rf_res = rf_df[(rf_df['vendor_name'].str.lower() == drug.lower()) | (rf_df['pert_iname'].str.lower() == drug.lower())]
     if not rf_res.empty:
-        rank_info = f"Rank={rf_res['rank'].values[0]+1}"
+        rank_info = f"Rank={rf_res['rank'].values[0]}"
         uncertainty_info = f", Uncertainty={rf_res['uncertainty'].values[0]:.3f}" if 'uncertainty' in rf_res.columns else ""
         print(f"  Random Forest: Prediction={rf_res['prediction'].values[0]:.3f}, {rank_info}{uncertainty_info}")
     else:
         print("  Random Forest: Not found")
+
+# --- Spearman Rank Correlation: Prospective Screening Molecules vs Model Ranks ---
+# Molecules ordered by MIC (rank 1 = lowest MIC = most active)
+prospective_mic_order = [
+    'Thiostrepton',
+    'Ceftiofur',
+    'dactinomycin',
+    'Cefodizime',
+    'Cadazolid',
+    'Cefozopran',
+    'Cefazolin (sodium)',
+    'Cefotetan',
+    'Levofloxacin',
+    'Linaclotide',
+    'cefotiam-cilexetil',
+]
+mic_ranks = list(range(1, len(prospective_mic_order) + 1))
+
+def lookup_rank(df, drug_name, rank_col='rank'):
+    res = df[(df['vendor_name'].str.lower() == drug_name.lower()) |
+             (df['pert_iname'].str.lower() == drug_name.lower())]
+    if not res.empty:
+        return int(res[rank_col].values[0])
+    return None
+
+print("\n--- Spearman Rank Correlation: Prospective Screening Molecules vs Model Ranks ---")
+print("(MIC rank 1 = lowest MIC = most active; model rank 1 = highest predicted probability)")
+
+model_lookup = [
+    ('MoLFormer', molformer_df),
+    ('D-MPNN', chemprop_df),
+    ('Random Forest', rf_df),
+    ('Ensemble (MoLFormer + D-MPNN)', ensemble_df),
+]
+
+for model_name, df in model_lookup:
+    mic_ranks_found, model_ranks_found, missing = [], [], []
+    for mic_rank, drug in zip(mic_ranks, prospective_mic_order):
+        r = lookup_rank(df, drug)
+        if r is not None:
+            mic_ranks_found.append(mic_rank)
+            model_ranks_found.append(r)
+        else:
+            missing.append(drug)
+
+    if len(model_ranks_found) < 2:
+        print(f"\n{model_name}: insufficient data ({len(model_ranks_found)} molecules found)")
+        continue
+
+    rho, pval = stats.spearmanr(mic_ranks_found, model_ranks_found)
+    print(f"\n{model_name} (n={len(model_ranks_found)}):")
+    print(f"  Spearman rho = {rho:.4f}, p-value = {pval:.4f}")
+    if missing:
+        print(f"  Not found: {missing}")
+
+# --- Inter-model Spearman Rank Correlation for Prospective Screening Molecules ---
+print("\n--- Inter-model Spearman Rank Correlation: Prospective Screening Molecules ---")
+print("(Pairwise correlation of the 11 molecules' ranks across models)")
+
+# Collect each model's ranks for the 11 molecules
+model_ranks_dict = {}
+for model_name, df in model_lookup:
+    ranks = []
+    for drug in prospective_mic_order:
+        r = lookup_rank(df, drug)
+        ranks.append(r)
+    model_ranks_dict[model_name] = ranks
+
+model_names = list(model_ranks_dict.keys())
+for i, name_a in enumerate(model_names):
+    for name_b in model_names[i + 1:]:
+        ranks_a = model_ranks_dict[name_a]
+        ranks_b = model_ranks_dict[name_b]
+        # Keep only molecules found in both models
+        pairs = [(a, b) for a, b in zip(ranks_a, ranks_b) if a is not None and b is not None]
+        if len(pairs) < 2:
+            print(f"\n{name_a} vs {name_b}: insufficient data")
+            continue
+        ra, rb = zip(*pairs)
+        rho, pval = stats.spearmanr(ra, rb)
+        print(f"\n{name_a} vs {name_b} (n={len(pairs)}):")
+        print(f"  Spearman rho = {rho:.4f}, p-value = {pval:.4f}")
     
