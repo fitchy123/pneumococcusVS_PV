@@ -175,6 +175,7 @@ if __name__ == '__main__':
             predict_df.loc[predict_df_valid.index, 'prediction'] = cp_pred
             predict_df.loc[predict_df_valid.index, 'uncertainty'] = cp_uncertainty
         
+        predict_df.sort_values('prediction', ascending=False, inplace=True)
         predict_df.to_csv(args.output_path, index=False)
     
     print("end time: ", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))

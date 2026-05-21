@@ -12,6 +12,7 @@ parser.add_argument('--results_folder', type=str, default='results',
                     help='Folder containing prediction CSVs and where output figures are saved')
 args = parser.parse_args()
 results_folder = args.results_folder
+generate_graphs = results_folder != 'results/no_decoys'
 
 number_of_molecules = 20
 
@@ -452,13 +453,14 @@ unique_curves = compute_unique_curves(ranks_df, percents)
 unique_ci = compute_binomial_confidence_intervals(unique_curves, k_values)
 
 # Combined plot with labels b and c
-plot_overlap_and_unique_combined(percents, overlap_curves, unique_curves,
-                                 os.path.join(results_folder, 'overlap_and_unique_combined.png'),
-                                 overlap_ci=overlap_ci, unique_ci=unique_ci, use_dashes=True)
+if generate_graphs:
+    plot_overlap_and_unique_combined(percents, overlap_curves, unique_curves,
+                                     os.path.join(results_folder, 'overlap_and_unique_combined.png'),
+                                     overlap_ci=overlap_ci, unique_ci=unique_ci, use_dashes=True)
 
-# Individual plots (kept for backward compatibility)
-plot_overlap_curves(percents, overlap_curves, os.path.join(results_folder, 'overlap_vs_top_percent.png'), confidence_intervals=overlap_ci, use_dashes=True)
-plot_unique_curves(percents, unique_curves, os.path.join(results_folder, 'unique_in_top_percent.png'), confidence_intervals=unique_ci, use_dashes=True)
+    # Individual plots (kept for backward compatibility)
+    plot_overlap_curves(percents, overlap_curves, os.path.join(results_folder, 'overlap_vs_top_percent.png'), confidence_intervals=overlap_ci, use_dashes=True)
+    plot_unique_curves(percents, unique_curves, os.path.join(results_folder, 'unique_in_top_percent.png'), confidence_intervals=unique_ci, use_dashes=True)
 
 # --- Add cross-model ranks ---
 molformer_df['rank_chemprop'] = [chemprop_df[chemprop_df['InChIKey'] == InChIKey]['rank'].values[0] for InChIKey in molformer_df['InChIKey']]
@@ -517,7 +519,8 @@ ensemble_all_df['rank'] = ensemble_all_df.index
 
 # --- Prediction probability distributions ---
 pred_series = collect_prediction_series(molformer_df, chemprop_df, rf_df, merged_df)
-plot_prediction_histograms_grid(pred_series, os.path.join(results_folder, 'prediction_distributions_grid_logx.png'), bins=30, xlim=(0.0, 1.0), log_x=False, log_y=True, density=False, same_y_scale=True, kde=False, kde_bw_adjust=1.5, panel_label='a')
+if generate_graphs:
+    plot_prediction_histograms_grid(pred_series, os.path.join(results_folder, 'prediction_distributions_grid_logx.png'), bins=30, xlim=(0.0, 1.0), log_x=False, log_y=True, density=False, same_y_scale=True, kde=False, kde_bw_adjust=1.5, panel_label='a')
 
 # --- Predictions for Specific Drugs ---
 drugs = ['dactinomycin', 'Cadazolid', 'Cefazolin (sodium)', 'Cefodizime', 'Cefotetan', 
@@ -612,32 +615,4 @@ for model_name, df in model_lookup:
     print(f"  Spearman rho = {rho:.4f}, p-value = {pval:.4f}")
     if missing:
         print(f"  Not found: {missing}")
-
-# --- Inter-model Spearman Rank Correlation for Prospective Screening Molecules ---
-print("\n--- Inter-model Spearman Rank Correlation: Prospective Screening Molecules ---")
-print("(Pairwise correlation of the 11 molecules' ranks across models)")
-
-# Collect each model's ranks for the 11 molecules
-model_ranks_dict = {}
-for model_name, df in model_lookup:
-    ranks = []
-    for drug in prospective_mic_order:
-        r = lookup_rank(df, drug)
-        ranks.append(r)
-    model_ranks_dict[model_name] = ranks
-
-model_names = list(model_ranks_dict.keys())
-for i, name_a in enumerate(model_names):
-    for name_b in model_names[i + 1:]:
-        ranks_a = model_ranks_dict[name_a]
-        ranks_b = model_ranks_dict[name_b]
-        # Keep only molecules found in both models
-        pairs = [(a, b) for a, b in zip(ranks_a, ranks_b) if a is not None and b is not None]
-        if len(pairs) < 2:
-            print(f"\n{name_a} vs {name_b}: insufficient data")
-            continue
-        ra, rb = zip(*pairs)
-        rho, pval = stats.spearmanr(ra, rb)
-        print(f"\n{name_a} vs {name_b} (n={len(pairs)}):")
-        print(f"  Spearman rho = {rho:.4f}, p-value = {pval:.4f}")
     

@@ -101,6 +101,7 @@ if args.output_path:
     df_all['uncertainty'] = 0.0
     df_all.loc[test_idx, 'prediction'] = pred
     df_all.loc[test_idx, 'uncertainty'] = uncertainty
+    df_all.sort_values('prediction', ascending=False, inplace=True)
     df_all.to_csv(args.output_path, index=False)
 
 #p_precision, p_recall, thresholds = precision_recall_curve(df['final_activity_label'].loc[test_idx], pred)

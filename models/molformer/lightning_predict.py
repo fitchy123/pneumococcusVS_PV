@@ -123,6 +123,7 @@ if __name__ == '__main__':
 
     if args.output_path is not None:
         os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
+        df.sort_values('prediction', ascending=False, inplace=True)
         df.to_csv(args.output_path, index=False)
 
     """print('\tMCC @top1%: ', matthews_corrcoef(df['final_activity_label'], [x>0.5 for x in df['prediction']]))
