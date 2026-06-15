@@ -17,9 +17,11 @@ This repository contains:
 To just analyze the results of ML methods on the drug repurposing hub run:
 - results_analysis.py
 
+There are also csv files in results/ with the ordered predictions of each method on the drug repurposing hub.
+
 #### Running models
 
-The saved models can be downloaded from zenodo: https://zenodo.org/records/14960323
+The saved models can be downloaded from zenodo: https://zenodo.org/records/20346610
 
 Within each model folder there is a hparams.txt file listing hyperparameters of the saved models for reference (saved models from zenodo will run on default code with no changes necessary).
 
@@ -34,3 +36,9 @@ Running these files will save the results of that ML method in a CSV file in the
 #### Package Installation
 - Set up conda environment with environment.yml: `conda env create -f environment.yml`
 - Install pip packages: `pip install -r requirements.txt`
+
+#### Ablation
+
+results/no_decoys/ and results/standard_split/ contain predictions and results for ablations where models are trained with no presumed negatives from the MRSA assay and on a standard data split respectively.
+
+An analysis of the ablation predictions can be run by passing a different "--results_folder" argument to results_analysis.py. Saved ablation models are available upon request (fitchy123@gmail.com).
