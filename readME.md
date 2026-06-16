@@ -21,7 +21,7 @@ There are also csv files in results/ with the ordered predictions of each method
 
 #### Running models
 
-The saved models can be downloaded from zenodo: https://zenodo.org/records/20346610
+The saved models (model_checkpoints.zip) can be downloaded from zenodo: https://zenodo.org/records/20719617
 
 Within each model folder there is a hparams.txt file listing hyperparameters of the saved models for reference (saved models from zenodo will run on default code with no changes necessary).
 
@@ -41,4 +41,6 @@ Running these files will save the results of that ML method in a CSV file in the
 
 results/no_decoys/ and results/standard_split/ contain predictions and results for ablations where models are trained with no presumed negatives from the MRSA assay and on a standard data split respectively.
 
-An analysis of the ablation predictions can be run by passing a different "--results_folder" argument to results_analysis.py. Saved ablation models are available upon request (fitchy123@gmail.com).
+An analysis of the ablation predictions can be run by passing a different --results_folder argument to results_analysis.py. 
+
+Saved ablation models are available from the zenodo repository (no_decoys.zip and standard_split.zip). To make predictions with the ablation models use the --model_dirs argument in run_chemprop.py, the --checkpoint_path argument in lightning_predict.py and the --model_path argument in run_rf.py
